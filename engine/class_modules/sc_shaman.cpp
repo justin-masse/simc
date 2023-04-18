@@ -732,6 +732,14 @@ public:
     player_talent_t further_beyond;
     player_talent_t skybreakers_fiery_demise;
     player_talent_t windspeakers_lava_resurgence;
+
+    // Restoration dps spells
+    // Row 3
+    player_talent_t stormkeeper;
+    // Row 4
+    player_talent_t acid_rain;
+    // Row 5
+    player_talent_t master_of_the_elements;
   } talent;
 
   // Misc Spells
@@ -9080,6 +9088,68 @@ void shaman_t::init_spells()
   talent.skybreakers_fiery_demise = _ST( "Skybreaker's Fiery Demise" );
   talent.windspeakers_lava_resurgence = _ST( "Windspeaker's Lava Resurgence" );
 
+  // Restoration
+  // Row 1
+  talent.earth_shock = _ST( "Riptide" );
+  // Row 2
+  talent.deluge = _ST( "Deluge" );
+  talent.healing_wave = _ST( "Healing Wave" );
+  talent.healing_stream_totem = _ST( "Healing Stream Totem" );
+  // Row 3
+  talent.healing_rain = _ST( "Healing Rain" );
+  talent.stormkeeper = _ST( "Stormkeeper" );
+  talent.resurgence = _ST( "Resurgence" );
+  talent.tidal_waves = _ST( "Tidal Waves" );
+  // Row 4
+  talent.acid_rain = _ST( "Acid Rain" );
+  talent.overflowing_shores = _ST( "Overflowing Shores" );
+  talent.ancestral_vigor = _ST( "Ancestral Vigor" );
+  talent.flash_flood = _ST( "Flash Flood" );
+  talent.water_totem_mastery = _ST( "Water Totem Mastery" );
+  // Row 5
+  talent.ancestral_reach = _ST( "Ancestral Reach" );
+  talent.flow_of_the_tides = _ST( "Flow of the Tides" );
+  talent.spirit_link_totem = _ST( "Spirit Link Totem" );
+  talent.refreshing_waters = _ST( "Refreshing Waters" );
+  talent.master_of_the_elements = _ST( "Master of the Elements" );
+  talent.living_stream = _ST( "Living Stream" );
+  talent.cloudburst_totem = _ST( "Cloudburst Totem" );
+  // Row 6
+  talent.wavespeakers_blessing = _ST( "Wavespeaker's Blessing" );
+  talent.healing_tide_totem = _ST( "Healing Tide Totem" );
+  talent.lava_surge = _ST( "Lava Surge" );
+  talent.mana_tide_totem = _ST( "Mana Tide Totem" );
+  talent.torrent = _ST( "Torrent" );
+  // Row 7
+  talent.undulation = _ST( "Undulation" );
+  talent.unleash_life = _ST( "Unleash Life" );
+  talent.current_control = _ST( "Current Control" );
+  talent.tide_turner = _ST( "Tide Turner" );
+  talent.echo_of_the_elements = _ST( "Echo of the Elements" );
+  talent.resonant_waters = _ST( "Resonant Waters" );
+  talent.spiritwalkers_tidal_totem = _ST( "Spiritwalker's Tidal Totem" );
+  talent.earthen_wall_totem = _ST( "Earthen Wall Totem" );
+  talent.ancestral_protection_totem = _ST( "Ancestral Protection Totem" );
+  talent.earthliving_weapon = _ST( "Earthliving Weapon" );
+  // Row 8
+  talent.primordial_wave = _ST( "Primordial Wave" );
+  talent.ancestral_awakening = _ST( "Ancestral Awakening" );
+  talent.earthen_harmony = _ST( "Earthen Harmony" );
+  talent.undercurrent = _ST( "Undercurrent" );
+  // Row 9
+  talent.improve_primordial_wave = _ST( "Improved Primordial Wave" );
+  talent.tidebringer = _ST( "Tidebringer" );
+  talent.downpour = _ST( "Downpour" );
+  talent.improved_earthliving_weapon = _ST( "Improved Earthliving Weapon" );
+  // Row 10
+  talent.continous_waves = _ST( "Continuous Waves" );
+  talent.tumbling_waves = _ST( "Tumbling Waves" );
+  talent.primal_tide_core = _ST( "Primal Tide Core" );
+  talent.high_tide = _ST( "High Tide" );
+  talent.ascendance = _ST( "Ascendance" );
+  talent.deeply_rooted_elements = _ST( "Deeply Rooted Elements" );
+  talent.wellspring = _ST( "Wellspring" );
+
   //
   // Misc spells
   //
@@ -9128,7 +9198,7 @@ void shaman_t::init_base_stats()
 
   if ( specialization() == SHAMAN_RESTORATION )
   {
-    resources.base[ RESOURCE_MANA ]               = 20000;
+    resources.base[ RESOURCE_MANA ]               = 250000;
     resources.initial_multiplier[ RESOURCE_MANA ] = 1.0 + spec.restoration_shaman->effectN( 5 ).percent();
   }
 }
@@ -10475,9 +10545,8 @@ std::string shaman_t::default_temporary_enchant() const
     case SHAMAN_ENHANCEMENT:
       return "disabled";
     case SHAMAN_RESTORATION:
-      if ( true_level >= 60 )
-        return "main_hand:shadowcore_oil";
-      SC_FALLTHROUGH;
+      // Is howling rune or buzzing rune better for dps? Shams would usually have ELW anyway?
+      return "main_hand:howling_rune_3";
     default:
       return "disabled";
   }
@@ -10840,12 +10909,14 @@ void shaman_t::init_action_list_restoration_dps()
 {
   action_priority_list_t* precombat = get_action_priority_list( "precombat" );
   action_priority_list_t* def       = get_action_priority_list( "default" );
+  action_priority_list_t* single    = get_action_priority_list( "single", "Single target action priority list" );
+  action_priority_list_t* aoe       = get_action_priority_list( "aoe", "Multi target action priority list" );
 
-  // Grabs whatever Elemental is using
+  // precombat stuff to setup
   precombat->add_action( "flask" );
   precombat->add_action( "food" );
   precombat->add_action( "augmentation" );
-  precombat->add_action( this, "Earth Elemental" );
+  precombat->add_action( "earth_elemental" );
   precombat->add_action( "snapshot_stats", "Snapshot raid buffed stats before combat begins and pre-potting is done." );
   precombat->add_action( "potion" );
 
@@ -10854,8 +10925,9 @@ void shaman_t::init_action_list_restoration_dps()
   def->add_action( this, "Wind Shear", "", "Interrupt of casts." );
   def->add_action( "potion" );
   def->add_action( "use_items" );
-  def->add_action( this, "Flame Shock", "if=!ticking" );
-  def->add_action( this, "Earth Elemental" );
+
+  // All Shamans Bloodlust by default
+  def->add_action( this, "Bloodlust", "line_cd=600" );
 
   // Racials
   def->add_action( "blood_fury" );
@@ -10864,12 +10936,31 @@ void shaman_t::init_action_list_restoration_dps()
   def->add_action( "ancestral_call" );
   def->add_action( "bag_of_tricks" );
 
-  def->add_action( this, "Lava Burst", "if=dot.flame_shock.remains>cast_time&cooldown_react" );
-  def->add_action( "primordial_wave" );
-  def->add_action( this, "Lightning Bolt", "if=spell_targets.chain_lightning<3" );
-  def->add_action( this, "Chain Lightning", "if=spell_targets.chain_lightning>2" );
-  def->add_action( this, "Flame Shock", "moving=1" );
-  def->add_action( this, "Frost Shock", "moving=1" );
+  // Cooldowns
+  def->add_action( "stormkeeper,if=!buff.stormkeeper.up" );
+  def->add_action( "natures_swiftness" );
+
+  // Always use healing rain (to trigger acid rain) if it is talented
+  def->add_action( "healing_rain,if=talent.acid_rain.enabled", "Acid Rain makes it rain" );
+
+  def->add_action( "call_action_list,name=single,if=active_enemies=1", "If_only_one_enemy,_priority_follows_the_'single'_action_list." );
+  def->add_action( "call_action_list,name=aoe,if=active_enemies>1", "On_multiple_enemies,_the_priority_follows_the_'aoe'_action_list." );
+
+  // ST rotation
+  single_target->add_action( "lava_burst,if=cooldown_react&buff.lava_surge.up", "Lava Surge is neat. Utilize it." );
+  single_target->add_action(
+          "primordial_wave,target_if=min:dot.flame_shock.remains,if=!buff.primordial_wave.up",
+          "Use Primordial Wave as much as possible without wasting buffs." );
+  single_target->add_action( "flame_shock,target_if=min:dot.flame_shock.remains,if=active_enemies=1&refreshable" );
+  single_target->add_action( "lava_burst,target_if=dot.flame_shock.remains>2", "Single target Lava Burst is stronk." );
+  single_target->add_action( "lightning_bolt", "Lightning bolt spam is fun" );
+  single_target->add_action( "frost_shock,moving=1", "Frost Shock is our movement filler if it is taken." );
+  single_target->add_action( "flame_shock,moving=1", "Use flame shock as filler if frost shock is not taken." );
+
+  // AOE rotation
+  aoe->add_action( "chain_lightning", "Chain Lightning go brrrr" );
+  aoe->add_action( "frost_shock,moving=1", "Frost Shock is our movement filler if it is taken." );
+  aoe->add_action( "flame_shock,moving=1", "Use flame shock as filler if frost shock is not taken." );
 }
 
 // shaman_t::init_actions ===================================================
